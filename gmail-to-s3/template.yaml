@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Gmail to S3 with Lambda Durable Functions
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: S3 bucket for storing emails
+  
+  GmailTokenSecretName:
+    Type: String
+    Default: gmail-oauth-token
+    Description: Secrets Manager secret name for Gmail OAuth token
+
+Resources:
+  GmailToS3Function:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: gmail-to-s3-durable
+      Runtime: python3.13
+      Handler: handler.handler
+      CodeUri: .
+      MemorySize: 1024
+      Timeout: 900
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3BucketName
+          S3_PREFIX: gmail-exports
+          GMAIL_TOKEN_SECRET: !Ref GmailTokenSecretName
+          BATCH_SIZE: '100'
+      # Durable execution config
+      DurableConfig:
+        ExecutionTimeout: 86400  # 24 hours max durable execution
+        RetentionPeriodInDays: 7
+      # Required policy for durable execution + custom policies
+      Policies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicDurableExecutionRolePolicy
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+                - secretsmanager:PutSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${GmailTokenSecretName}*'
+      # Required: durable functions need qualified ARN (version/alias)
+      AutoPublishAlias: prod
+
+Outputs:
+  FunctionArn:
+    Description: Durable function ARN
+    Value: !GetAtt GmailToS3Function.Arn
+  
+  AliasArn:
+    Description: Function alias ARN (use this for invocations)
+    Value: !Ref GmailToS3Function.Alias

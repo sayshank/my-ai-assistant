@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail AI Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --accent: #4285f4;
+            --accent-glow: rgba(66, 133, 244, 0.3);
+            --gmail-red: #ea4335;
+            --gmail-yellow: #fbbc05;
+            --gmail-green: #34a853;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0a6;
+            --border: rgba(255, 255, 255, 0.08);
+            --glass: rgba(255, 255, 255, 0.03);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .bg-grid {
+            position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(66, 133, 244, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(66, 133, 244, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+        @keyframes gridMove { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+        .bg-glow { position: fixed; width: 600px; height: 600px; border-radius: 50%; filter: blur(150px); opacity: 0.15; pointer-events: none; }
+        .bg-glow-1 { background: var(--accent); top: -200px; left: -200px; }
+        .bg-glow-2 { background: var(--gmail-red); bottom: -200px; right: -200px; }
+        .gmail-logo { width: 48px; height: 48px; }
+        .gmail-logo svg { width: 100%; height: 100%; }
+        .login-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; position: relative; z-index: 1; }
+        .login-box { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid var(--border); padding: 48px; border-radius: 24px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .login-header { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 40px; }
+        .login-header h1 { font-size: 28px; font-weight: 600; background: linear-gradient(135deg, var(--text-primary), var(--accent)); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .login-header p { color: var(--text-secondary); font-size: 14px; }
+        .input-group { position: relative; margin-bottom: 20px; }
+        .input-group input { width: 100%; padding: 16px 20px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; font-size: 15px; color: var(--text-primary); transition: all 0.3s ease; }
+        .input-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .input-group input::placeholder { color: var(--text-secondary); }
+        .btn-primary { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #5a9cf5); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px var(--accent); }
+        .error { color: var(--gmail-red); text-align: center; margin-bottom: 20px; font-size: 14px; padding: 12px; background: rgba(234, 67, 53, 0.1); border-radius: 8px; display: none; }
+        .error.show { display: block; }
+        #new-password-form { display: none; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+        #new-password-form p { color: var(--text-secondary); margin-bottom: 16px; font-size: 14px; }
+        .chat-container { display: none; flex-direction: column; height: 100vh; position: relative; z-index: 1; }
+        .header { background: var(--glass); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header h1 { font-size: 20px; font-weight: 500; }
+        .header-badge { padding: 6px 12px; background: linear-gradient(135deg, var(--accent), var(--gmail-green)); border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-logout { padding: 10px 20px; background: transparent; border: 1px solid var(--border); color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-logout:hover { border-color: var(--gmail-red); color: var(--gmail-red); }
+        .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .messages::-webkit-scrollbar { width: 6px; }
+        .messages::-webkit-scrollbar-track { background: transparent; }
+        .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .message { max-width: 75%; animation: messageIn 0.3s ease; }
+        @keyframes messageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { align-self: flex-end; }
+        .message.assistant { align-self: flex-start; }
+        .message-content { padding: 16px 20px; border-radius: 16px; line-height: 1.6; font-size: 14px; }
+        .message.user .message-content { background: linear-gradient(135deg, var(--accent), #5a9cf5); border-bottom-right-radius: 4px; }
+        .message.assistant .message-content { background: var(--bg-tertiary); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .message-content pre { background: var(--bg-primary); padding: 16px; border-radius: 8px; overflow-x: auto; margin: 12px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; border: 1px solid var(--border); }
+        .message-content code { font-family: 'JetBrains Mono', monospace; background: var(--bg-primary); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .status { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .status .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s ease infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.2); } }
+        .input-area { background: var(--glass); backdrop-filter: blur(20px); border-top: 1px solid var(--border); padding: 20px 24px; }
+        .input-wrapper { display: flex; gap: 12px; max-width: 900px; margin: 0 auto; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 16px; padding: 8px; transition: all 0.3s; }
+        .input-wrapper:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+        .input-wrapper input { flex: 1; padding: 12px 16px; background: transparent; border: none; font-size: 15px; color: var(--text-primary); }
+        .input-wrapper input:focus { outline: none; }
+        .input-wrapper input::placeholder { color: var(--text-secondary); }
+        .btn-send { padding: 12px 24px; background: linear-gradient(135deg, var(--accent), #5a9cf5); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-send:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 5px 20px -5px var(--accent); }
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-send svg { width: 18px; height: 18px; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    
+    <div id="login" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <div class="gmail-logo">
+                    <svg viewBox="0 0 48 48">
+                        <path fill="#4285F4" d="M45.1 24.5c0-1.5-.1-2.9-.4-4.3H24v8.1h11.8c-.5 2.7-2 5-4.3 6.5v5.4h7c4.1-3.8 6.5-9.4 6.5-15.7z"/>
+                        <path fill="#34A853" d="M24 46c5.8 0 10.7-1.9 14.3-5.2l-7-5.4c-1.9 1.3-4.4 2.1-7.3 2.1-5.6 0-10.4-3.8-12.1-8.9H4.7v5.6C8.3 41.4 15.6 46 24 46z"/>
+                        <path fill="#FBBC05" d="M11.9 28.6c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.6H4.7C3.2 17.8 2.4 20.8 2.4 24s.8 6.2 2.3 9.2l7.2-5.6z"/>
+                        <path fill="#EA4335" d="M24 9.5c3.2 0 6 1.1 8.2 3.2l6.1-6.1C34.7 3.1 29.8 1 24 1 15.6 1 8.3 5.6 4.7 12.8l7.2 5.6c1.7-5.1 6.5-8.9 12.1-8.9z"/>
+                    </svg>
+                </div>
+                <h1>Gmail AI Agent</h1>
+                <p>Search 70,000+ emails with AI-powered intelligence</p>
+            </div>
+            <div id="login-error" class="error"></div>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="Email address" autocomplete="username">
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="Password" autocomplete="current-password" onkeypress="if(event.key==='Enter')login()">
+            </div>
+            <button class="btn-primary" onclick="login()">Sign In</button>
+            <div id="new-password-form">
+                <p>🔐 Please set a new password</p>
+                <div class="input-group">
+                    <input type="password" id="new-password" placeholder="New Password" onkeypress="if(event.key==='Enter')setNewPassword()">
+                </div>
+                <button class="btn-primary" onclick="setNewPassword()">Set Password</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat" class="chat-container">
+        <div class="header">
+            <div class="header-left">
+                <div class="gmail-logo">
+                    <svg viewBox="0 0 48 48">
+                        <path fill="#4285F4" d="M45.1 24.5c0-1.5-.1-2.9-.4-4.3H24v8.1h11.8c-.5 2.7-2 5-4.3 6.5v5.4h7c4.1-3.8 6.5-9.4 6.5-15.7z"/>
+                        <path fill="#34A853" d="M24 46c5.8 0 10.7-1.9 14.3-5.2l-7-5.4c-1.9 1.3-4.4 2.1-7.3 2.1-5.6 0-10.4-3.8-12.1-8.9H4.7v5.6C8.3 41.4 15.6 46 24 46z"/>
+                        <path fill="#FBBC05" d="M11.9 28.6c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.6H4.7C3.2 17.8 2.4 20.8 2.4 24s.8 6.2 2.3 9.2l7.2-5.6z"/>
+                        <path fill="#EA4335" d="M24 9.5c3.2 0 6 1.1 8.2 3.2l6.1-6.1C34.7 3.1 29.8 1 24 1 15.6 1 8.3 5.6 4.7 12.8l7.2 5.6c1.7-5.1 6.5-8.9 12.1-8.9z"/>
+                    </svg>
+                </div>
+                <h1>Gmail AI Agent</h1>
+                <span class="header-badge">AI Powered</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">Sign Out</button>
+        </div>
+        <div id="messages" class="messages"></div>
+        <div id="status" class="status"></div>
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="question" placeholder="Ask anything about your emails..." onkeypress="if(event.key==='Enter')ask()">
+                <button id="send-btn" class="btn-send" onclick="ask()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                    </svg>
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const CONFIG = {
+        userPoolId: 'eu-central-1_O3heHyJdc',
+        clientId: '24lsociqitccvemdc475mks9fu',
+        apiEndpoint: 'https://jksw0uwss9.execute-api.eu-central-1.amazonaws.com/prod',
+        region: 'eu-central-1'
+    };
+    
+    let idToken = null, accessToken = null, currentUsername = null;
+    const history = [];
+
+    async function cognitoRequest(action, params) {
+        const response = await fetch(`https://cognito-idp.${CONFIG.region}.amazonaws.com/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-amz-json-1.1',
+                'X-Amz-Target': `AWSCognitoIdentityProviderService.${action}`
+            },
+            body: JSON.stringify(params)
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || error.__type || 'Cognito request failed');
+        }
+        return response.json();
+    }
+
+    function checkAuth() {
+        const stored = localStorage.getItem('emailAgentAuth');
+        if (stored) {
+            try {
+                const auth = JSON.parse(stored);
+                if (auth.expiry > Date.now()) {
+                    idToken = auth.idToken;
+                    accessToken = auth.accessToken;
+                    currentUsername = auth.username;
+                    showChat();
+                    return;
+                }
+            } catch (e) {}
+        }
+        showLogin();
+    }
+
+    function saveAuth(tokens, username) {
+        idToken = tokens.IdToken || tokens.idToken;
+        accessToken = tokens.AccessToken || tokens.accessToken;
+        currentUsername = username;
+        localStorage.setItem('emailAgentAuth', JSON.stringify({
+            idToken, accessToken, username,
+            expiry: Date.now() + 3600000
+        }));
+    }
+
+    function showLogin() {
+        document.getElementById('login').style.display = 'flex';
+        document.getElementById('chat').style.display = 'none';
+    }
+
+    function showChat() {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('chat').style.display = 'flex';
+        document.getElementById('question').focus();
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('login-error');
+        el.textContent = msg;
+        el.classList.add('show');
+    }
+
+    async function login() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        document.getElementById('login-error').classList.remove('show');
+
+        try {
+            const result = await cognitoRequest('InitiateAuth', {
+                AuthFlow: 'USER_PASSWORD_AUTH',
+                ClientId: CONFIG.clientId,
+                AuthParameters: { USERNAME: email, PASSWORD: password }
+            });
+
+            if (result.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+                window.tempSession = result.Session;
+                window.tempUsername = email;
+                document.getElementById('new-password-form').style.display = 'block';
+                return;
+            }
+
+            saveAuth(result.AuthenticationResult, email);
+            showChat();
+        } catch (err) {
+            showError(err.message || 'Login failed');
+        }
+    }
+
+    async function setNewPassword() {
+        const newPassword = document.getElementById('new-password').value;
+        try {
+            const result = await cognitoRequest('RespondToAuthChallenge', {
+                ClientId: CONFIG.clientId,
+                ChallengeName: 'NEW_PASSWORD_REQUIRED',
+                Session: window.tempSession,
+                ChallengeResponses: {
+                    USERNAME: window.tempUsername,
+                    NEW_PASSWORD: newPassword
+                }
+            });
+            saveAuth(result.AuthenticationResult, window.tempUsername);
+            showChat();
+        } catch (err) {
+            showError(err.message || 'Failed to set password');
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem('emailAgentAuth');
+        idToken = null;
+        accessToken = null;
+        currentUsername = null;
+        history.length = 0;
+        document.getElementById('messages').innerHTML = '';
+        showLogin();
+    }
+
+    function addMessage(role, content, isStreaming = false) {
+        const messagesDiv = document.getElementById('messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+        if (isStreaming) messageDiv.id = 'streaming-message';
+        const text = typeof content === 'string' ? content : JSON.stringify(content);
+        let formatted = text.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+        messageDiv.innerHTML = `<div class="message-content">${formatted}</div>`;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        return messageDiv;
+    }
+
+    function updateStreamingMessage(content) {
+        let messageDiv = document.getElementById('streaming-message');
+        if (!messageDiv) {
+            messageDiv = addMessage('assistant', '', true);
+        }
+        const text = typeof content === 'string' ? content : JSON.stringify(content);
+        let formatted = text.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\n/g, '<br>');
+        messageDiv.querySelector('.message-content').innerHTML = formatted;
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+    }
+
+    function finalizeStreamingMessage() {
+        const messageDiv = document.getElementById('streaming-message');
+        if (messageDiv) messageDiv.removeAttribute('id');
+    }
+
+    function setStatus(text) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = text ? `<span class="dot"></span>${text}` : '';
+    }
+
+    async function ask() {
+        const input = document.getElementById('question');
+        const question = input.value.trim();
+        if (!question) return;
+        input.value = '';
+        document.getElementById('send-btn').disabled = true;
+        addMessage('user', question);
+        history.push({ role: 'user', content: question });
+        setStatus('Thinking...');
+        
+        let streamedContent = '';
+        
+        try {
+            const response = await fetch(`${CONFIG.apiEndpoint}/ask`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+                body: JSON.stringify({ question, history: history.slice(-10) })
+            });
+            if (response.status === 401) {
+                addMessage('assistant', 'Session expired. Please login again.');
+                logout();
+                return;
+            }
+            if (!response.ok) {
+                const errorText = await response.text();
+                addMessage('assistant', `Error: ${response.status} - ${errorText}`);
+                setStatus('');
+                document.getElementById('send-btn').disabled = false;
+                return;
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.type === 'status') {
+                                setStatus(data.message);
+                            } else if (data.type === 'token') {
+                                streamedContent += data.content;
+                                updateStreamingMessage(streamedContent);
+                                setStatus('');
+                            } else if (data.type === 'done') {
+                                finalizeStreamingMessage();
+                                if (streamedContent) {
+                                    history.push({ role: 'assistant', content: streamedContent });
+                                }
+                            } else if (data.type === 'error') {
+                                if (!streamedContent) {
+                                    addMessage('assistant', `Error: ${data.message}`);
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                }
+            }
+            
+            // Fallback if no done event received
+            if (streamedContent && !document.getElementById('streaming-message')) {
+                // Already finalized
+            } else if (streamedContent) {
+                finalizeStreamingMessage();
+                history.push({ role: 'assistant', content: streamedContent });
+            }
+            
+        } catch (err) {
+            addMessage('assistant', `Error: ${err.message}`);
+        }
+        setStatus('');
+        document.getElementById('send-btn').disabled = false;
+        input.focus();
+    }
+
+    checkAuth();
+</script>
+</body>
+</html>
