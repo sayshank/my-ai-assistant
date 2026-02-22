@@ -7,7 +7,6 @@ AI-powered email assistant that searches ~70,000 emails using Pinecone vector se
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      Frontend (CloudFront)                   │
-│                     ai.sayshank.com                          │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -31,9 +30,9 @@ AI-powered email assistant that searches ~70,000 emails using Pinecone vector se
               ┌───────────────┴───────────────┐
               ▼                               ▼
 ┌─────────────────────────┐     ┌─────────────────────────┐
-│   Pinecone (us-east-1)  │     │   Bedrock (eu-central-1)│
+│        Pinecone         │     │     Amazon Bedrock      │
 │                         │     │                         │
-│ • email-senders index   │     │ Claude Sonnet 4         │
+│ • email-senders index   │     │                         │
 │ • email-content index   │     │                         │
 │ • llama-text-embed-v2   │     │                         │
 └─────────────────────────┘     └─────────────────────────┘
