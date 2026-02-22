@@ -1,0 +1,25 @@
+# Only include gmail-to-s3 and email-agent-pinecone
+# Exclude all other project folders
+bedrock-kb/
+email-agent/
+email-to-lakehouse/
+email-vector-kb/
+pinecone-ingest/
+redshift-setup/
+logs/
+
+# Build artifacts
+.aws-sam/
+*.jar
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+response.json
+architecture-diagram.drawio
