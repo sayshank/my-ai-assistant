@@ -16,13 +16,11 @@ Lambda function that exports Gmail emails to S3 using OAuth2. Handles 30K+ email
 
 ### email-agent-pinecone
 The main AI agent - a web app with:
-- LangChain ReAct agent with Claude Sonnet 4
+- LangChain ReAct agent with Amazon Bedrock
 - Two search tools (by sender, by content)
 - Pinecone vector search with `llama-text-embed-v2`
 - Cognito authentication
 - CloudFront + S3 frontend
-
-**Live at:** [ai.sayshank.com](https://ai.sayshank.com)
 
 ## Architecture
 
@@ -35,7 +33,7 @@ Gmail → Lambda → S3 → Pinecone
 ## Tech Stack
 
 - AWS Lambda (Python 3.11)
-- Amazon Bedrock (Claude Sonnet 4)
+- Amazon Bedrock
 - Pinecone (vector search)
 - Amazon Cognito (auth)
 - S3 + CloudFront (frontend)
