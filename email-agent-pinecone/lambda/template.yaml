@@ -57,7 +57,7 @@ Resources:
     Properties:
       FunctionName: email-agent-pinecone
       Handler: handler.handler
-      Runtime: python3.11
+      Runtime: python3.13
       CodeUri: .
       Environment:
         Variables:

@@ -6,4 +6,3 @@ langchain-core>=0.3.0
 langgraph>=0.2.0
 fastapi>=0.109.0
 mangum>=0.17.0
-numpy<2.0.0
