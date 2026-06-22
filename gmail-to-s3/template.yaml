@@ -46,6 +46,12 @@ Resources:
       # Required: durable functions need qualified ARN (version/alias)
       AutoPublishAlias: prod
 
+  GmailToS3FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${GmailToS3Function}'
+      RetentionInDays: 30
+
 Outputs:
   FunctionArn:
     Description: Durable function ARN

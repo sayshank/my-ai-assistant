@@ -70,12 +70,22 @@ Resources:
               Action:
                 - bedrock:InvokeModel
                 - bedrock:InvokeModelWithResponseStream
-              Resource: '*'
+              Resource:
+                # Anthropic foundation models (needed across regions for cross-region inference profiles)
+                - !Sub 'arn:aws:bedrock:*::foundation-model/anthropic.*'
+                # Inference profiles defined in this account/region
+                - !Sub 'arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*'
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
               Resource:
-                - arn:aws:secretsmanager:eu-central-1:123456789012:secret:pinecone-api-key-*
+                - !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:pinecone-api-key-*'
+
+  EmailAgentFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${EmailAgentFunction}'
+      RetentionInDays: 30
 
   # API Gateway HTTP API with JWT Authorizer
   HttpApi:
@@ -84,7 +94,7 @@ Resources:
       StageName: prod
       CorsConfiguration:
         AllowOrigins:
-          - '*'
+          - !Sub 'https://${CloudFrontDistribution.DomainName}'
         AllowHeaders:
           - Content-Type
           - Authorization
@@ -92,6 +102,9 @@ Resources:
           - GET
           - POST
           - OPTIONS
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
 
   # Cognito JWT Authorizer
   CognitoAuthorizerId:

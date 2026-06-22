@@ -135,10 +135,9 @@ Guidelines:
                 tool_id = tool_use['toolUseId']
                 
                 print(f"  → Using tool: {tool_name}")
-                print(f"    Input: {tool_input}")
-                
+
                 result = execute_tool(tool_name, tool_input)
-                print(f"    Result: {result[:300]}..." if len(result) > 300 else f"    Result: {result}")
+                print(f"    Result: {len(result)} chars")
                 
                 tool_results.append({
                     "toolResult": {
